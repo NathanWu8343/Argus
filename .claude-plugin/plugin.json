@@ -1,0 +1,8 @@
+{
+  "name": "argus",
+  "version": "0.2.0",
+  "description": "confirm-first: restate the request's key points, and allow tool use only after button confirmation",
+  "author": {
+    "name": "nathawu"
+  }
+}
