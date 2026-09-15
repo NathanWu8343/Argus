@@ -44,6 +44,5 @@ test('Codex installs the native package from a repository containing both market
   }
   assert.equal(require(path.join(installed, 'hooks/argus.js')).adapter.stateNamespace, 'codex');
   const hooks = read(path.join(installed, 'hooks/hooks.json')).hooks;
-  assert.equal(hooks.SessionEnd[0].hooks[0].timeout, 3);
   assert.match(hooks.PostToolUse[0].matcher, /request_user_input/);
 });

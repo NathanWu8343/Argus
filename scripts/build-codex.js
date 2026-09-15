@@ -14,19 +14,14 @@ const metadata = JSON.parse(read('.claude-plugin/plugin.json'));
 const plugin = { ...metadata, ...JSON.parse(read('codex/src/plugin.json')) };
 plugin.interface.developerName = metadata.author.name;
 
-// Same events and commands; Codex's plugin root variable and its question tools
+// Same commands; Codex's plugin root variable and its question tool. Codex never blocks Stop, so that hook is dropped.
 const hooks = JSON.parse(read('hooks/hooks.json').replaceAll('${CLAUDE_PLUGIN_ROOT}', '${PLUGIN_ROOT}'));
-hooks.description = `confirm-first gate: blocks every tool except ${adapter.questionTools.join(' and ')} until the user confirms`;
-hooks.hooks.PostToolUse[0].matcher = `^(?:${adapter.questionTools.join('|')})$`;
-// Codex caps SessionEnd hooks at three seconds; keep Claude's timeout unchanged
-for (const group of hooks.hooks.SessionEnd) {
-  for (const hook of group.hooks) hook.timeout = 3;
-}
+hooks.description = `confirm-first gate: blocks every tool except ${adapter.questionTool} until the user confirms`;
+hooks.hooks.PostToolUse[0].matcher = `^(?:${adapter.questionTool})$`;
+if (!adapter.stopReason) delete hooks.hooks.Stop;
 
 // Drop the Claude-only front matter
-const skill = read('skills/confirm-first/SKILL.md')
-  .replace(/^argument-hint:.*\n/m, '')
-  .replace(/^disable-model-invocation: true\n/m, '');
+const skill = read('skills/confirm-first/SKILL.md').replace(/^(?:argument-hint|disable-model-invocation):.*\n/gm, '');
 
 const files = {
   '.codex-plugin/plugin.json': json(plugin),

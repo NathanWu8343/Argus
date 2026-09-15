@@ -10,9 +10,8 @@ const adapter = {
   stateNamespace: 'claude',
   stateDir: path.join(os.homedir(), '.claude', 'argus'),
   invocation: /^\s*\/argus:confirm-first(\s|$)/,
-  questionTools: ['AskUserQuestion'],
+  questionTool: 'AskUserQuestion',
   answerOf: (response, question) => response?.answers?.[question.question],
-  blockStop: true,
   denyReason:
     'confirm-first alignment in progress: the user has not confirmed yet, so every tool except AskUserQuestion is paused. Finish the restatement, then ask for confirmation with AskUserQuestion (header: argus).',
   stopReason:

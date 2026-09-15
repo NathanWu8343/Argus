@@ -3,12 +3,11 @@
 //   stateNamespace    host subdirectory when ARGUS_STATE_DIR overrides the default
 //   stateDir          default directory for state files
 //   invocation        RegExp matching a prompt that starts the gate
-//   questionTools     tool names allowed while pending
+//   questionTool      tool name allowed while pending
 //   answerOf          (tool_response, question) → the label the user picked, or undefined
-//   blockStop         true to block ending the turn once while pending, so the reply ends with the question;
-//                     false when the answer arrives as the next user prompt and the turn must be allowed to end
 //   denyReason        text returned when a tool is denied
-//   stopReason        text returned when ending the turn is blocked (unused when blockStop is false)
+//   stopReason        when set, ending the turn is blocked once while pending with this text, so the reply ends with
+//                     the question; omit it when the answer arrives as the next user prompt and the turn must end
 'use strict';
 
 const fs = require('fs');
@@ -29,16 +28,27 @@ function chosenLabel(input, adapter) {
   return (question.options ?? []).some((o) => o.label === answer) ? answer : null;
 }
 
+// CONFIRM or CANCEL when this event answers the pending gate; null otherwise.
+// A reply that is exactly a label counts on every host; it is the only path when options cannot be shown
+function resolution(input, pending, adapter) {
+  if (!pending) return null;
+  let label = null;
+  if (input.hook_event_name === 'UserPromptSubmit') label = String(input.prompt ?? '').trim();
+  if (input.hook_event_name === 'PostToolUse' && input.tool_name === adapter.questionTool) label = chosenLabel(input, adapter);
+  return label === CONFIRM || label === CANCEL ? label : null;
+}
+
+const withContext = (next, hookEventName, additionalContext) =>
+  ({ ...next, output: { hookSpecificOutput: { hookEventName, additionalContext } } });
+
 function decide(input, pending, adapter) {
+  const resolved = resolution(input, pending, adapter);
   switch (input.hook_event_name) {
-    case 'UserPromptSubmit': {
-      const prompt = String(input.prompt ?? '');
-      // A reply that is exactly a label counts on every host; it is the only path when options cannot be shown
-      if (pending && [CONFIRM, CANCEL].includes(prompt.trim())) return { pending: false };
-      return { pending: pending || adapter.invocation.test(prompt) };
-    }
+    case 'UserPromptSubmit':
+      if (resolved) return { pending: false };
+      return { pending: pending || adapter.invocation.test(String(input.prompt ?? '')) };
     case 'PreToolUse':
-      if (pending && !adapter.questionTools.includes(input.tool_name)) {
+      if (pending && input.tool_name !== adapter.questionTool) {
         return {
           pending,
           output: {
@@ -51,25 +61,16 @@ function decide(input, pending, adapter) {
         };
       }
       return { pending };
-    case 'PostToolUse': {
-      const label = pending && adapter.questionTools.includes(input.tool_name) ? chosenLabel(input, adapter) : null;
-      if (label === CONFIRM) {
-        return {
-          pending: false,
-          output: { hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: CONFIRMED_CONTEXT } },
-        };
-      }
-      if (label === CANCEL) return { pending: false };
+    case 'PostToolUse':
+      if (resolved === CONFIRM) return withContext({ pending: false }, 'PostToolUse', CONFIRMED_CONTEXT);
+      if (resolved === CANCEL) return { pending: false };
       return { pending };
-    }
     case 'Stop':
       // stop_hook_active means we already blocked once: allow the stop but keep pending so the gate stays on
-      if (pending && !input.stop_hook_active && adapter.blockStop) {
+      if (pending && !input.stop_hook_active && adapter.stopReason) {
         return { pending, output: { decision: 'block', reason: adapter.stopReason } };
       }
       return { pending };
-    case 'SessionEnd':
-      return { pending: false };
     default:
       return { pending };
   }
@@ -81,35 +82,36 @@ function stateDir(adapter) {
     : adapter.stateDir;
 }
 
-// SessionEnd does not fire on crashes, so leftover state files are removed at the next session start
-function removeStale(dir) {
+// Pending survives the end of a session so a resumed session keeps its gate; files left behind by
+// other, abandoned sessions are swept on each prompt once they are a day old
+function removeStale(dir, keep) {
   const now = Date.now();
   for (const name of fs.readdirSync(dir)) {
     if (!name.endsWith('.pending')) continue;
     const file = path.join(dir, name);
-    if (now - fs.statSync(file).mtimeMs > STALE_MS) fs.rmSync(file, { force: true });
+    if (file !== keep && now - fs.statSync(file).mtimeMs > STALE_MS) fs.rmSync(file, { force: true });
   }
 }
 
-function main(adapter) {
+function main(adapter, decideEvent) {
   const raw = fs.readFileSync(0, 'utf8');
   const dir = stateDir(adapter);
   fs.mkdirSync(dir, { recursive: true });
   if (process.env.ARGUS_DEBUG) fs.appendFileSync(path.join(dir, 'debug.log'), raw.trim() + '\n');
   const input = JSON.parse(raw);
-  if (input.hook_event_name === 'SessionStart') removeStale(dir);
-
   const file = path.join(dir, `${String(input.session_id).replace(/[^\w-]/g, '_')}.pending`);
+  if (input.hook_event_name === 'UserPromptSubmit') removeStale(dir, file);
+
   const pending = fs.existsSync(file);
-  const next = decide(input, pending, adapter);
+  const next = decideEvent(input, pending, adapter);
   if (next.pending && !pending) fs.writeFileSync(file, new Date().toISOString());
   if (!next.pending && pending) fs.rmSync(file, { force: true });
   if (next.output) process.stdout.write(JSON.stringify(next.output));
 }
 
-function run(adapter) {
+function run(adapter, decideEvent = decide) {
   try {
-    main(adapter);
+    main(adapter, decideEvent);
   } catch (err) {
     // A failure inside argus always lets the action through; it must never block normal use
     try {
@@ -120,4 +122,4 @@ function run(adapter) {
   }
 }
 
-module.exports = { decide, run };
+module.exports = { decide, resolution, withContext, run, CONFIRM, CANCEL, CONFIRMED_CONTEXT };

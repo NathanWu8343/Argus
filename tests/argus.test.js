@@ -11,7 +11,7 @@ const { decide } = require('../hooks/argus.js');
 const SCRIPT = path.join(__dirname, '..', 'hooks', 'argus.js');
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// UserPromptSubmit, PreToolUse, Stop, and SessionEnd fields come from probed hook stdin;
+// UserPromptSubmit, PreToolUse, and Stop fields come from probed hook stdin;
 // the AskUserQuestion response comes from a transcript's toolUseResult
 const OPTIONS = [
   { label: '正確，開始執行', description: '依覆述執行' },
@@ -119,10 +119,6 @@ test('idle does not block ending the turn', () => {
   assert.deepEqual(decide(stop(false), false), { pending: false });
 });
 
-test('SessionEnd returns to idle', () => {
-  assert.deepEqual(decide(base('SessionEnd', { reason: 'other' }), true), { pending: false });
-});
-
 // ── Layer 2: script I/O ──
 
 function tempDir(t) {
@@ -158,27 +154,22 @@ test('script: invoke → Write and Read denied → click confirm → allowed', (
   assert.equal(run(tool('Read'), dir), '');
 });
 
-test('script: SessionEnd removes this session\'s state file', (t) => {
-  const dir = tempDir(t);
-  run(prompt('/argus:confirm-first'), dir);
-  run(base('SessionEnd', { reason: 'other' }), dir);
-  assert.deepEqual(fs.readdirSync(path.join(dir, 'claude')), []);
-});
-
-test('script: SessionStart removes leftovers older than a day and keeps recent ones', (t) => {
+test('script: a prompt removes other sessions\' leftovers older than a day, keeping recent ones and its own', (t) => {
   const dir = tempDir(t);
   fs.mkdirSync(path.join(dir, 'claude'));
   const stale = path.join(dir, 'claude', 'old.pending');
   const fresh = path.join(dir, 'claude', 'new.pending');
-  fs.writeFileSync(stale, '');
-  fs.writeFileSync(fresh, '');
+  const own = path.join(dir, 'claude', 's1.pending');
   const twoDaysAgo = new Date(Date.now() - 2 * DAY_MS);
-  fs.utimesSync(stale, twoDaysAgo, twoDaysAgo);
+  for (const file of [stale, fresh, own]) fs.writeFileSync(file, '');
+  for (const file of [stale, own]) fs.utimesSync(file, twoDaysAgo, twoDaysAgo);
 
-  run(base('SessionStart', { source: 'startup' }), dir);
+  assert.equal(run(prompt('create a file for me'), dir), '');
 
   assert.ok(!fs.existsSync(stale));
   assert.ok(fs.existsSync(fresh));
+  assert.ok(fs.existsSync(own));
+  assert.equal(JSON.parse(run(tool('Write'), dir)).hookSpecificOutput.permissionDecision, 'deny');
 });
 
 test('script: non-JSON stdin is allowed through with no output', (t) => {

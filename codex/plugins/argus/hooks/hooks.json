@@ -1,5 +1,5 @@
 {
-  "description": "confirm-first gate: blocks every tool except request_user_input and request_user_input_async until the user confirms",
+  "description": "confirm-first gate: blocks every tool except request_user_input until the user confirms",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -26,45 +26,12 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "^(?:request_user_input|request_user_input_async)$",
+        "matcher": "^(?:request_user_input)$",
         "hooks": [
           {
             "type": "command",
             "command": "node \"${PLUGIN_ROOT}/hooks/argus.js\"",
             "timeout": 10
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/hooks/argus.js\"",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/hooks/argus.js\"",
-            "timeout": 10
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"${PLUGIN_ROOT}/hooks/argus.js\"",
-            "timeout": 3
           }
         ]
       }

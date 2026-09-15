@@ -34,7 +34,7 @@ test('shared state override isolates gates, confirmation, cleanup, and logs acro
   run('claude', 'UserPromptSubmit', { prompt: '/argus:confirm-first claude-only' });
   denied('claude');
   assert.equal(run('codex', 'PreToolUse', { tool_name: 'Bash' }), null);
-  run('codex', 'SessionEnd');
+  run('codex', 'UserPromptSubmit', { prompt: '取消此請求' });
   denied('claude');
 
   run('codex', 'UserPromptSubmit', { prompt: '$confirm-first codex-only' });
@@ -44,7 +44,7 @@ test('shared state override isolates gates, confirmation, cleanup, and logs acro
   denied('claude');
 
   run('codex', 'UserPromptSubmit', { prompt: '$confirm-first codex-only' });
-  run('claude', 'SessionEnd');
+  run('claude', 'UserPromptSubmit', { prompt: '取消此請求' });
   assert.equal(run('claude', 'PreToolUse', { tool_name: 'Bash' }), null);
   denied('codex');
 
@@ -54,10 +54,10 @@ test('shared state override isolates gates, confirmation, cleanup, and logs acro
     fs.writeFileSync(file, '');
     fs.utimesSync(file, old, old);
   }
-  run('codex', 'SessionStart');
+  run('codex', 'UserPromptSubmit', { prompt: 'ordinary request' });
   assert.ok(fs.existsSync(staleFiles[0]));
   assert.ok(!fs.existsSync(staleFiles[1]));
-  run('claude', 'SessionStart');
+  run('claude', 'UserPromptSubmit', { prompt: 'ordinary request' });
   assert.ok(!fs.existsSync(staleFiles[0]));
   denied('codex');
 
