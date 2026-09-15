@@ -1,8 +1,6 @@
 ---
 name: confirm-first
 description: Restate the request's key points and start only after explicit confirmation
-argument-hint: "<task>"
-disable-model-invocation: true
 ---
 
 Align on the request before acting. Write everything the user sees, including the restatement, the question, and the option labels, in Traditional Chinese (zh-TW).

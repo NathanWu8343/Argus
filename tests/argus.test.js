@@ -50,6 +50,13 @@ test('ordinary prompts and other slash commands leave the state unchanged', () =
   assert.deepEqual(decide(prompt('switch to plan B'), true), { pending: true });
 });
 
+test('a prompt that is exactly a label returns to idle; anything else stays pending', () => {
+  assert.deepEqual(decide(prompt('正確，開始執行'), true), { pending: false });
+  assert.deepEqual(decide(prompt(' 取消此請求 '), true), { pending: false });
+  assert.deepEqual(decide(prompt('正確，但檔名改成 a.txt'), true), { pending: true });
+  assert.deepEqual(decide(prompt('需要修正'), true), { pending: true });
+});
+
 test('pending denies every tool except AskUserQuestion', () => {
   for (const name of ['Write', 'Edit', 'Bash', 'Agent', 'Read', 'Grep', 'Glob', 'ToolSearch', 'mcp__context7__query-docs']) {
     const { pending, output } = decide(tool(name), true);
@@ -136,7 +143,7 @@ function run(input, dir, env = {}) {
 
 test('script: invoke → Write and Read denied → click confirm → allowed', (t) => {
   const dir = tempDir(t);
-  const stateFile = path.join(dir, 's1.pending');
+  const stateFile = path.join(dir, 'claude', 's1.pending');
 
   assert.equal(run(prompt('/argus:confirm-first create a file'), dir), '');
   assert.ok(fs.existsSync(stateFile));
@@ -155,13 +162,14 @@ test('script: SessionEnd removes this session\'s state file', (t) => {
   const dir = tempDir(t);
   run(prompt('/argus:confirm-first'), dir);
   run(base('SessionEnd', { reason: 'other' }), dir);
-  assert.deepEqual(fs.readdirSync(dir), []);
+  assert.deepEqual(fs.readdirSync(path.join(dir, 'claude')), []);
 });
 
 test('script: SessionStart removes leftovers older than a day and keeps recent ones', (t) => {
   const dir = tempDir(t);
-  const stale = path.join(dir, 'old.pending');
-  const fresh = path.join(dir, 'new.pending');
+  fs.mkdirSync(path.join(dir, 'claude'));
+  const stale = path.join(dir, 'claude', 'old.pending');
+  const fresh = path.join(dir, 'claude', 'new.pending');
   fs.writeFileSync(stale, '');
   fs.writeFileSync(fresh, '');
   const twoDaysAgo = new Date(Date.now() - 2 * DAY_MS);
@@ -180,7 +188,13 @@ test('script: non-JSON stdin is allowed through with no output', (t) => {
 test('script: with ARGUS_DEBUG set, stdin and errors are logged and the action is still allowed', (t) => {
   const dir = path.join(tempDir(t), 'not-created-yet');
   assert.equal(run('not json', dir, { ARGUS_DEBUG: '1' }), '');
-  const log = fs.readFileSync(path.join(dir, 'debug.log'), 'utf8');
+  const log = fs.readFileSync(path.join(dir, 'claude', 'debug.log'), 'utf8');
   assert.match(log, /^not json\n/);
   assert.match(log, /ERROR SyntaxError/);
+});
+
+test('script: a state directory error still allows the action when debug logging also fails', (t) => {
+  const file = path.join(tempDir(t), 'not-a-directory');
+  fs.writeFileSync(file, '');
+  assert.equal(run(prompt('/argus:confirm-first'), file, { ARGUS_DEBUG: '1' }), '');
 });

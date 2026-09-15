@@ -1,0 +1,5 @@
+interface:
+  display_name: "Confirm First"
+  short_description: "先用白話文覆述需求重點，等你明確確認後才開始執行原始請求"
+policy:
+  allow_implicit_invocation: false

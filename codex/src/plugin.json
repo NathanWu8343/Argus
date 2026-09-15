@@ -1,0 +1,12 @@
+{
+  "description": "confirm-first: restate the request and wait for explicit confirmation",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Argus",
+    "shortDescription": "先確認需求，再開始執行",
+    "longDescription": "先覆述需求，再等待明確確認；hooks 保護支援的本機工具呼叫。",
+    "category": "Productivity",
+    "capabilities": ["Interactive"],
+    "defaultPrompt": ["$confirm-first 幫我把登入頁改成雙欄版面"]
+  }
+}

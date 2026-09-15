@@ -1,0 +1,20 @@
+{
+  "name": "argus",
+  "interface": {
+    "displayName": "Argus"
+  },
+  "plugins": [
+    {
+      "name": "argus",
+      "source": {
+        "source": "local",
+        "path": "./codex/plugins/argus"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

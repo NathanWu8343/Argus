@@ -3,12 +3,12 @@
   "owner": {
     "name": "nathawu"
   },
-  "description": "confirm-first: restate the request's key points, and allow tool use only after button confirmation",
+  "description": "confirm-first: restate the request's key points, and allow tool use only after explicit confirmation",
   "plugins": [
     {
       "name": "argus",
       "source": ".",
-      "description": "confirm-first: restate the request's key points, and allow tool use only after button confirmation",
+      "description": "confirm-first: restate the request's key points, and allow tool use only after explicit confirmation",
       "version": "0.2.0",
       "author": {
         "name": "nathawu"

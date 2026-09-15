@@ -1,7 +1,7 @@
 {
   "name": "argus",
   "version": "0.2.0",
-  "description": "confirm-first: restate the request's key points, and allow tool use only after button confirmation",
+  "description": "confirm-first: restate the request's key points, and allow tool use only after explicit confirmation",
   "author": {
     "name": "nathawu"
   }
