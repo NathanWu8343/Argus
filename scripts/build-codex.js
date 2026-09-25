@@ -14,11 +14,10 @@ const metadata = JSON.parse(read('.claude-plugin/plugin.json'));
 const plugin = { ...metadata, ...JSON.parse(read('codex/src/plugin.json')) };
 plugin.interface.developerName = metadata.author.name;
 
-// Same commands; Codex's plugin root variable and its question tool. Codex never blocks Stop, so that hook is dropped.
+// Same commands; Codex's plugin root variable and its question tool
 const hooks = JSON.parse(read('hooks/hooks.json').replaceAll('${CLAUDE_PLUGIN_ROOT}', '${PLUGIN_ROOT}'));
 hooks.description = `confirm-first gate: blocks every tool except ${adapter.questionTool} until the user confirms`;
 hooks.hooks.PostToolUse[0].matcher = `^(?:${adapter.questionTool})$`;
-if (!adapter.stopReason) delete hooks.hooks.Stop;
 
 // Drop the Claude-only front matter
 const skill = read('skills/confirm-first/SKILL.md').replace(/^(?:argument-hint|disable-model-invocation):.*\n/gm, '');

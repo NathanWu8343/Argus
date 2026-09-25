@@ -11,11 +11,11 @@ const adapter = {
   stateDir: path.join(os.homedir(), '.claude', 'argus'),
   invocation: /^\s*\/argus:confirm-first(\s|$)/,
   questionTool: 'AskUserQuestion',
+  // AskUserQuestion can be deferred, and ToolSearch is how it gets loaded
+  alsoAllowed: ['ToolSearch'],
   answerOf: (response, question) => response?.answers?.[question.question],
   denyReason:
-    'confirm-first alignment in progress: the user has not confirmed yet, so every tool except AskUserQuestion is paused. Finish the restatement, then ask for confirmation with AskUserQuestion (header: argus).',
-  stopReason:
-    'confirm-first alignment in progress: no confirmation yet. If the restatement is done, end with AskUserQuestion (header: argus); if you are waiting for the user to provide details, end the turn.',
+    'confirm-first alignment in progress: the user has not confirmed yet, so every tool except AskUserQuestion (and ToolSearch to load it) is paused. Finish the restatement, then ask for confirmation with AskUserQuestion (header: argus).',
 };
 
 if (require.main === module) core.run(adapter);

@@ -11,7 +11,7 @@ const { decide } = require('../hooks/argus.js');
 const SCRIPT = path.join(__dirname, '..', 'hooks', 'argus.js');
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// UserPromptSubmit, PreToolUse, and Stop fields come from probed hook stdin;
+// UserPromptSubmit and PreToolUse fields come from probed hook stdin;
 // the AskUserQuestion response comes from a transcript's toolUseResult
 const OPTIONS = [
   { label: '正確，開始執行', description: '依覆述執行' },
@@ -22,7 +22,7 @@ const OPTIONS = [
 const base = (event, fields) => ({ session_id: 's1', transcript_path: 't.jsonl', cwd: '.', hook_event_name: event, ...fields });
 const prompt = (text) => base('UserPromptSubmit', { prompt_id: 'p1', permission_mode: 'default', prompt: text });
 const tool = (name) => base('PreToolUse', { tool_name: name, tool_input: {} });
-const stop = (active) => base('Stop', { stop_hook_active: active });
+const stop = () => base('Stop');
 
 function answer(reply, { header = 'argus', before = [] } = {}) {
   const question = { question: '以上理解正確嗎？', header, options: OPTIONS, multiSelect: false };
@@ -57,8 +57,8 @@ test('a prompt that is exactly a label returns to idle; anything else stays pend
   assert.deepEqual(decide(prompt('需要修正'), true), { pending: true });
 });
 
-test('pending denies every tool except AskUserQuestion', () => {
-  for (const name of ['Write', 'Edit', 'Bash', 'Agent', 'Read', 'Grep', 'Glob', 'ToolSearch', 'mcp__context7__query-docs']) {
+test('pending denies every tool except AskUserQuestion and ToolSearch', () => {
+  for (const name of ['Write', 'Edit', 'Bash', 'Agent', 'Read', 'Grep', 'Glob', 'mcp__context7__query-docs']) {
     const { pending, output } = decide(tool(name), true);
     assert.equal(pending, true);
     assert.equal(output.hookSpecificOutput.hookEventName, 'PreToolUse');
@@ -67,8 +67,9 @@ test('pending denies every tool except AskUserQuestion', () => {
   }
 });
 
-test('pending still allows AskUserQuestion', () => {
+test('pending still allows AskUserQuestion and ToolSearch, which loads it when deferred', () => {
   assert.deepEqual(decide(tool('AskUserQuestion'), true), { pending: true });
+  assert.deepEqual(decide(tool('ToolSearch'), true), { pending: true });
 });
 
 test('idle never denies', () => {
@@ -107,16 +108,14 @@ test('idle ignores button answers', () => {
   assert.deepEqual(decide(answer('正確，開始執行'), false), { pending: false });
 });
 
-test('pending blocks ending the turn once, then allows it while staying pending', () => {
-  const first = decide(stop(false), true);
-  assert.equal(first.pending, true);
-  assert.equal(first.output.decision, 'block');
-  assert.match(first.output.reason, /AskUserQuestion/);
-  assert.deepEqual(decide(stop(true), true), { pending: true });
+test('ending the turn is never blocked and leaves the state unchanged', () => {
+  assert.deepEqual(decide(stop(), true), { pending: true });
+  assert.deepEqual(decide(stop(), false), { pending: false });
 });
 
-test('idle does not block ending the turn', () => {
-  assert.deepEqual(decide(stop(false), false), { pending: false });
+test('the plugin registers no Stop hook', () => {
+  const hooks = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'hooks', 'hooks.json'), 'utf8')).hooks;
+  assert.equal(hooks.Stop, undefined);
 });
 
 // ── Layer 2: script I/O ──

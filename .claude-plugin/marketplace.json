@@ -3,13 +3,13 @@
   "owner": {
     "name": "nathawu"
   },
-  "description": "confirm-first: restate the request's key points, and allow tool use only after explicit confirmation",
+  "description": "AI collaboration toolkit for Claude Code and Codex. confirm-first: restate the request's key points, and allow tool use only after explicit confirmation. session-relay: take over a Codex App session in Claude Code by its session ID",
   "plugins": [
     {
       "name": "argus",
       "source": ".",
-      "description": "confirm-first: restate the request's key points, and allow tool use only after explicit confirmation",
-      "version": "0.4.0",
+      "description": "AI collaboration toolkit for Claude Code and Codex. confirm-first: restate the request's key points, and allow tool use only after explicit confirmation. session-relay: take over a Codex App session in Claude Code by its session ID",
+      "version": "0.4.1",
       "author": {
         "name": "nathawu"
       }

@@ -52,7 +52,6 @@ const adapter = {
     const picked = parse(response)?.answers?.[question.id]?.answers;
     return picked?.length === 1 ? picked[0] : undefined;
   },
-  // No stopReason: a plain-text answer arrives as the next user prompt, so the turn must be allowed to end
   denyReason:
     `confirm-first alignment in progress: the user has not confirmed yet, so every tool except ${TOOL} is paused. Finish the restatement, then ask with ${TOOL} (header: argus); if it is unavailable, list the three labels as plain text and end the turn. Do not use ${ASYNC_TOOL}, sleep or polling tools.`,
 };

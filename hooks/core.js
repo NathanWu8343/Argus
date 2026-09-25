@@ -4,10 +4,9 @@
 //   stateDir          default directory for state files
 //   invocation        RegExp matching a prompt that starts the gate
 //   questionTool      tool name allowed while pending
+//   alsoAllowed       optional list of other tool names allowed while pending
 //   answerOf          (tool_response, question) → the label the user picked, or undefined
 //   denyReason        text returned when a tool is denied
-//   stopReason        when set, ending the turn is blocked once while pending with this text, so the reply ends with
-//                     the question; omit it when the answer arrives as the next user prompt and the turn must end
 'use strict';
 
 const fs = require('fs');
@@ -48,7 +47,7 @@ function decide(input, pending, adapter) {
       if (resolved) return { pending: false };
       return { pending: pending || adapter.invocation.test(String(input.prompt ?? '')) };
     case 'PreToolUse':
-      if (pending && input.tool_name !== adapter.questionTool) {
+      if (pending && input.tool_name !== adapter.questionTool && !adapter.alsoAllowed?.includes(input.tool_name)) {
         return {
           pending,
           output: {
@@ -64,12 +63,6 @@ function decide(input, pending, adapter) {
     case 'PostToolUse':
       if (resolved === CONFIRM) return withContext({ pending: false }, 'PostToolUse', CONFIRMED_CONTEXT);
       if (resolved === CANCEL) return { pending: false };
-      return { pending };
-    case 'Stop':
-      // stop_hook_active means we already blocked once: allow the stop but keep pending so the gate stays on
-      if (pending && !input.stop_hook_active && adapter.stopReason) {
-        return { pending, output: { decision: 'block', reason: adapter.stopReason } };
-      }
       return { pending };
     default:
       return { pending };

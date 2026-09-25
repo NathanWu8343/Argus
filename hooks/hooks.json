@@ -1,5 +1,5 @@
 {
-  "description": "confirm-first gate: blocks every tool except AskUserQuestion until the user confirms",
+  "description": "confirm-first gate: blocks every tool except AskUserQuestion and ToolSearch until the user confirms",
   "hooks": {
     "UserPromptSubmit": [
       { "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/argus.js\"", "timeout": 10 }] }
@@ -15,9 +15,6 @@
         "matcher": "AskUserQuestion",
         "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/argus.js\"", "timeout": 10 }]
       }
-    ],
-    "Stop": [
-      { "hooks": [{ "type": "command", "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/argus.js\"", "timeout": 10 }] }
     ]
   }
 }
